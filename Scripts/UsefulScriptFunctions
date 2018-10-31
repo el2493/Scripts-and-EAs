@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ## Jamf Binary Path (for when a "jamf" command needs to be run in a script)
 
 jamf_binary=`/usr/bin/which jamf`
