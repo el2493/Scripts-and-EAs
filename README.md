@@ -1,2 +1,2 @@
-# Scripts-and-Repos
-Bash Scripts and Jamf Repos
+# Scripts-and-EAs
+Bash Scripts and Jamf Extension Attributes
