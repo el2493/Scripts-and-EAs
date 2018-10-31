@@ -1,0 +1,7 @@
+#!/bin/sh
+exec 2>&1
+
+crowdstrikeVersion=$(sysctl cs | grep "cs.version")
+crowdstrikeVersion=${crowdstrikeVersion:12}
+
+echo "<result>$crowdstrikeVersion</result>"
