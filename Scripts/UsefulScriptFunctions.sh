@@ -18,3 +18,16 @@ loggedInUser=$( scutil <<< "show State:/Users/ConsoleUser" | awk -F': ' '/[[:spa
 loggedInUserUID=$(id -u $loggedInUser)
 
 /bin/launchctl asuser "$loggedInUserUID" /usr/bin/osascript -e
+
+## DecryptString (for cases like API where credentials need to be entered in script)
+
+function DecryptString() {
+    # Usage: ~$ DecryptString "Encrypted String" "Salt" "Passphrase"
+    echo "${1}" | /usr/bin/openssl enc -aes256 -d -a -A -S "${2}" -k "${3}"
+}
+
+usernameAPIEncrypted="Encrypted String 1"
+passwordAPIEncrypted="Encrypted String 2"
+
+usernameAPI=$(DecryptString $usernameAPIEncrypted 'Salt 1' 'Passphrase 1')
+passwordAPI=$(DecryptString $passwordAPIEncrypted 'Salt 2' 'Passphrase 2')
