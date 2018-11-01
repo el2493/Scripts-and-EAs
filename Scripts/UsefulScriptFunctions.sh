@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Jamf Binary Path (for when a "jamf" command needs to be run in a script)
+## Jamf Binary Path (for when a "jamf" command needs to be run in a script, use $jamf_binary instead)
 
 jamf_binary=`/usr/bin/which jamf`
 
