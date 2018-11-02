@@ -1,0 +1,19 @@
+#!/bin/sh -v
+exec 2>&1
+
+# Get MacOSX idletime. Shamelessly stolen from http://bit.ly/yVhc5H
+idleTime=$(/usr/sbin/ioreg -c IOHIDSystem | /usr/bin/awk '/HIDIdleTime/ {print int($NF/1000000000); exit}')
+
+echo Idle Time is $idleTime seconds
+
+if (( idleTime > 21600 )); then
+	## Get the logged in username
+	loggedInUser=$( scutil <<< "show State:/Users/ConsoleUser" | awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}  ' )
+	echo Idle more than 6 hours. Restarting computer
+	sudo -u "$loggedInUser" pkill -U studentlab
+	sleep 20
+	shutdown -r +2 &
+	exit 0
+else 
+	exit 1
+fi
