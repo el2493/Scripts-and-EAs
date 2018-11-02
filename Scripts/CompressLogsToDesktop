@@ -1,0 +1,145 @@
+#!/bin/sh
+
+# eei-logs-auto-collect.sh
+# Alex Kim - UC Berkeley, EEI
+
+# Adapted by elaugel to just save jamf.log and install.log to desktop (initially compressed a lot of .logs and mounted and saved to network share)
+
+# Collects jamf.log and install.log
+# Compresses to user's desktop
+
+##########
+# Variables
+##########
+
+# Current date in Year-Month-Day format
+currentDate=`/bin/date +%Y-%m-%d`
+
+# Current time in Hour:Minute:Seconds format
+currentTime=`/bin/date +%H%M%S`
+
+# Mac computer name
+compName=`/usr/sbin/scutil --get ComputerName`
+
+# User name of currently logged in user
+loggedInUser=$( scutil <<< "show State:/Users/ConsoleUser" | awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}    ' )
+
+# IP Address of ethernet device 0
+ethIP0=`/usr/sbin/ipconfig getifaddr en0`
+echo "$ethIP0"
+
+# IP Address of ethernet device 1
+ethIP1=`/usr/sbin/ipconfig getifaddr en1`
+echo "$ethIP1"
+
+# File name of compressed zip file of the /private/tmp/logoutput directory
+zipName="logs-$compName-$currentDate-$currentTime.zip"
+
+# Path to Jamf Helper (for ending message)
+jamfhelper="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
+
+##########
+# Computer Information File Creation
+##########
+
+# Create temporary folder if it doesn't exist
+mkdir /private/tmp/logoutput/
+
+# Check if the computer information file already exists. File should not exist but if yes, then delete it.
+if [ -f "/private/tmp/logoutput/00-$compName.txt" ];
+then
+    /bin/rm -f "/private/tmp/logoutput/00-$compName.txt"
+    echo "/private/tmp/logoutput/00-$compName.txt already exists. Deleted."
+fi
+
+# Pipe computer information to the file
+echo "Current Date: $currentDate" >> "/private/tmp/logoutput/00-$compName.txt"
+echo "Current Time: $currentTime" >> "/private/tmp/logoutput/00-$compName.txt"
+echo "Mac Computer Name: $compName" >> "/private/tmp/logoutput/00-$compName.txt"
+echo "Currently Logged in User: $loggedInUser" >> "/private/tmp/logoutput/00-$compName.txt"
+echo "en0 IP Address: $ethIP0" >> "/private/tmp/logoutput/00-$compName.txt"
+echo "en1 IP Address: $ethIP1" >> "/private/tmp/logoutput/00-$compName.txt"
+
+# Check if the computer information file was successfully created above and now exists.
+# This check is for logging purposes. The script will continue even if the file was not successfully created.
+if [ ! -f "/private/tmp/logoutput/00-$compName.txt" ];
+then
+    echo "/private/tmp/logoutput/00-$compName.txt was not successfully created. Continue anyway."
+else
+    echo "/private/tmp/logoutput/00-$compName.txt was successfully created."
+fi
+
+##########
+# Copy /private/var/log/jamf.log to the /private/tmp/logoutput/ Directory
+##########
+
+# Check if the jamf.log file already exists. File should not exist but if yes, then delete it.
+if [ -f "/private/tmp/logoutput/jamf.log" ];
+then
+    /bin/rm -f "/private/tmp/logoutput/jamf.log"
+    echo "/private/tmp/logoutput/jamf.log already exists. Deleted."
+fi
+
+/bin/cp "/private/var/log/jamf.log" "/private/tmp/logoutput/"
+
+##########
+# Copy /private/var/log/install.log to the /private/tmp/logoutput/ Directory
+##########
+
+# Check if the install.log file already exists. File should not exist but if yes, then delete it.
+if [ -f "/private/tmp/logoutput/install.log" ];
+then
+    /bin/rm -f "/private/tmp/logoutput/install.log"
+    echo "/private/tmp/logoutput/install.log already exists. Deleted."
+fi
+
+/bin/cp "/private/var/log/install.log" "/private/tmp/logoutput/"
+
+##########
+# Compress and copy the /private/tmp/logoutput Directory
+##########
+
+# Check if the zip file exists already. It should not exist but if yes, then delete it.
+if [ -f "/private/tmp/$zipName" ];
+then
+    /bin/rm -f "/private/tmp/$zipName"
+    echo "/private/tmp/$zipName already exists. Deleted."
+fi
+
+# Compress the /private/tmp/logoutput directory to a zip file in the /private/tmp directory.
+/usr/bin/zip -rj "/private/tmp/$zipName" /private/tmp/logoutput &>/dev/null
+
+# Check if the zip file was successfully created above and now exists. If it does not then exit.
+if [ ! -f "/private/tmp/$zipName" ];
+then
+    echo "/private/tmp/$zipName was not successfully created. Exiting."
+    exit 1
+else
+    echo "/private/tmp/$zipName was successfully created."
+fi
+
+# Copy the zip file of the logoutput directory to the user's desktop.
+/bin/cp -f -X "/private/tmp/$zipName" "/Users/$loggedInUser/Desktop/"
+
+##########
+# Cleanup
+##########
+
+# Delete the temporary folder and computer information file
+/bin/rm -rf "/private/tmp/logoutput/"
+
+# Delete the local copy of the zip logs file in /private/tmp/
+/bin/rm -f "/private/tmp/$zipName"
+
+echo "Logs have been successfully captured and compressed to desktop of $loggedInUser."
+
+##########
+# Message to user
+##########
+
+"$jamfhelper" -windowType utility -title "Logs Compressed to Desktop" -description "Maintenance logs have been compressed to a file ($zipName) on your computer's desktop.
+
+If you are experiencing an issue with your computer and have been asked to run this policy, please attach that file to an email and send it to cumcitjamfadmin@cumc.columbia.edu." -button1 "OK"
+
+
+exit 0
